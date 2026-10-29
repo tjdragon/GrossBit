@@ -31,14 +31,14 @@ This document analyzes address derivation and signing architectures for **GrossB
 
 In BIP-341, any Taproot output key $Q$ is computed from an internal x-only public key $P$ and an optional Merkle root $m$:
 
-$$t = \text{tagged\_hash}_{\text{"TapTweak"}}(P \parallel m)$$
+$$t = \text{tagged\_hash}_{\text{TapTweak}}(P \parallel m)$$
 $$Q = P + t \cdot G$$
 
 Instead of committing to an actual AST of Bitcoin scripts, we place a custom **32-byte tag** directly into the Merkle root field $m$:
 
 * **Address Generation**:
   $$m = \text{tag}_{32}$$
-  $$Q = P + \text{tagged\_hash}_{\text{"TapTweak"}}(P \parallel \text{tag}_{32}) \cdot G$$
+  $$Q = P + \text{tagged\_hash}_{\text{TapTweak}}(P \parallel \text{tag}_{32}) \cdot G$$
   The deposit address is $Q$ encoded as Bech32m (`bc1p...`).
 * **Key-Path Spending**:
   BIP-341 permits key-path spending even when a Merkle root is committed. The tweaked private key is:
