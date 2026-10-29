@@ -31,18 +31,24 @@ This document analyzes address derivation and signing architectures for **GrossB
 
 In BIP-341, any Taproot output key $Q$ is computed from an internal x-only public key $P$ and an optional Merkle root $m$:
 
-$$t = \text{tagged\_hash}_{\text{TapTweak}}(P \parallel m)$$
-$$Q = P + t \cdot G$$
+```text
+t = TaggedHash("TapTweak", P || m)
+Q = P + t * G
+```
 
 Instead of committing to an actual AST of Bitcoin scripts, we place a custom **32-byte tag** directly into the Merkle root field $m$:
 
 * **Address Generation**:
-  $$m = \text{tag}_{32}$$
-  $$Q = P + \text{tagged\_hash}_{\text{TapTweak}}(P \parallel \text{tag}_{32}) \cdot G$$
+  ```text
+  m = tag_32
+  Q = P + TaggedHash("TapTweak", P || tag_32) * G
+  ```
   The deposit address is $Q$ encoded as Bech32m (`bc1p...`).
 * **Key-Path Spending**:
   BIP-341 permits key-path spending even when a Merkle root is committed. The tweaked private key is:
-  $$d' = (d + t) \pmod n \quad \text{(with coordinate parity adjustments per BIP-340/341)}$$
+  ```text
+  d' = (d + t) mod n   (with coordinate parity adjustments per BIP-340/341)
+  ```
   The witness on-chain consists **solely of the 64-byte Schnorr signature**. The 32-byte tag is **never revealed on-chain**.
 
 ### BIP-371 PSBT Flow
@@ -61,7 +67,9 @@ The signer (cold storage, HSM, or software) reads $P$ and $m$, computes tweak $t
 
 Using standard BIP-32 / BIP-86 hardened derivation paths (e.g. `m/86'/0'/0'/0'/i`):
 
-$$k_{\text{child}} = \left( k_{\text{par}} + \text{HMAC-SHA512}(\text{ChainCode}_{\text{par}}, \text{0x00} \parallel k_{\text{par}} \parallel i) \right) \pmod n$$
+```text
+k_child = (k_parent + HMAC-SHA512(ChainCode_parent, 0x00 || k_parent || i)) mod n
+```
 
 * **Private Key Obligation**: Hardened derivation **strictly requires the parent private key** to compute child keys.
 * **Address Generation**: Public keys can **never** be derived from an `xpub` for hardened indices ($i \ge 2^{31}$).
@@ -76,7 +84,9 @@ $$k_{\text{child}} = \left( k_{\text{par}} + \text{HMAC-SHA512}(\text{ChainCode}
 Using unhardened derivation (e.g. `m/86'/0'/0'/0/i`):
 * The server stores the account extended public key (`xpub` / `tpub`), which includes $P_{\text{account}}$ and the 32-byte `ChainCode`.
 * Child public keys are derived purely publicly without private keys:
-  $$P_i = P_{\text{par}} + \text{HMAC-SHA512}(\text{ChainCode}_{\text{par}}, P_{\text{par}} \parallel i) \cdot G$$
+  ```text
+  P_i = P_parent + HMAC-SHA512(ChainCode_parent, P_parent || i) * G
+  ```
 
 ### Inherent Risks:
 * **Catastrophic Key Leakage**: If an attacker gets the `xpub` AND any single child private key leaks, the attacker can mathematically derive the **master/account private key**, compromising all past and future addresses.
